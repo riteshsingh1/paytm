@@ -1,0 +1,44 @@
+{
+    "name": "imritesh/paytm",
+    "description": ":description",
+    "version": "1.0.0",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ritesh Singh",
+            "email": "hello@imritesh.com",
+            "homepage": "http://imritesh.com"
+        }
+    ],
+    "homepage": "https://github.com/imritesh/paytm",
+    "keywords": ["Laravel", "paytm"],
+    "require": {
+        "illuminate/support": "~5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~7.0",
+        "mockery/mockery": "^1.1",
+        "orchestra/testbench": "~3.0",
+        "sempro/phpunit-pretty-print": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "imritesh\\paytm\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "imritesh\\paytm\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "imritesh\\paytm\\PaytmServiceProvider"
+            ],
+            "aliases": {
+                "paytm": "imritesh\\paytm\\Facades\\Paytm"
+            }
+        }
+    }
+}
