@@ -10,7 +10,7 @@
             "homepage": "http://imritesh.com"
         }
     ],
-    "homepage": "https://github.com/imritesh/paytm",
+    "homepage": "https://github.com/riteshsingh1/paytm",
     "keywords": ["Laravel", "paytm"],
     "require": {
         "illuminate/support": "~5"
