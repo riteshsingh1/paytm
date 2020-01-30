@@ -1,6 +1,5 @@
 # paytm
 
-[![Latest Version on Packagist][ico-version]][link-packagist]
 [![Total Downloads][ico-downloads]][link-downloads]
 
 Paytm Payment Gateway For Gratification 
