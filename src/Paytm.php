@@ -86,6 +86,7 @@ class Paytm implements Base
         return $this;
     }
 
+
     /**
      * @return \Exception|Paytm
      */
