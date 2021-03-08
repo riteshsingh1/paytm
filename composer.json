@@ -13,7 +13,7 @@
     "homepage": "https://github.com/riteshsingh1/paytm",
     "keywords": ["Laravel", "paytm"],
     "require": {
-        "illuminate/support": "~5|~6|~7|~8",
+        "illuminate/support": "~6|~7|~8",
         "ext-openssl": "*",
         "ext-curl": "*",
         "ext-json": "*"
@@ -26,21 +26,21 @@
     },
     "autoload": {
         "psr-4": {
-            "imritesh\\paytm\\": "src/"
+            "Imritesh\\Paytm\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "imritesh\\paytm\\Tests\\": "tests"
+            "Imritesh\\Paytm\\Tests\\": "tests"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "imritesh\\paytm\\PaytmServiceProvider"
+                "Imritesh\\Paytm\\PaytmServiceProvider"
             ],
             "aliases": {
-                "paytm": "imritesh\\paytm\\Facades\\Paytm"
+                "paytm": "Imritesh\\Paytm\\Facades\\Paytm"
             }
         }
     }

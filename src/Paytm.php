@@ -1,8 +1,8 @@
 <?php
 
-namespace imritesh\paytm;
+namespace Imritesh\Paytm;
 
-use imritesh\paytm\Process;
+use Imritesh\Process;
 /**
  * Paytm()->purpose('INCENTIVE')->accountNumber()->ifsc()->withReferenceId()->paymentAmount(100)->later()->pay();
  * Paytm()->checkPaymentStatus($referenceId);
