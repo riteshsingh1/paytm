@@ -4,119 +4,217 @@ namespace imritesh\paytm;
 
 use imritesh\paytm\Process;
 /**
- * Paytm('for translator')->toNumber(9810456407)->forOrder()->pay(100);
+ * Paytm()->purpose('INCENTIVE')->accountNumber()->ifsc()->withReferenceId()->paymentAmount(100)->later()->pay();
+ * Paytm()->checkPaymentStatus($referenceId);
  */
-class Paytm
+class Paytm implements Base
 {
+    /**
+     * @var
+     */
+    protected $referenceId;
+    /**
+     * @var
+     */
+    protected $account;
+    /**
+     * @var
+     */
+    protected $ifscCode;
+    /**
+     * @var
+     */
+    protected $amount;
+    /**
+     * @var string
+     */
+    protected $purposeName = 'INCENTIVE';
 
-    protected $mobileNumber;
-    protected $requestData;
-    protected $metaData;
-    protected $orderId;
+    /**
+     * @var
+     */
+    public $response;
 
-    public function __construct($metaData)
+    /**
+     * @var
+     */
+    public $later = false;
+
+    /**
+     * @param $amount
+     * @return Paytm
+     */
+    public function paymentAmount($amount): Paytm
     {
-        $this->metaData = $metaData;
-    }
-
-    public function forOrder(String $order)
-    {
-        $this->orderId = $order;
+        $this->amount = $amount;
         return $this;
     }
 
-    public function toNumber($number)
+    /**
+     * @param $purpose
+     * @return $this
+     */
+    public function purpose($purpose): Paytm
     {
-        $this->mobileNumber = $number;
+        $this->purposeName = $purpose;
         return $this;
     }
 
-    public function pay($amount)
+    /**
+     * @param $accountNumber
+     * @return $this
+     */
+    public function accountNumber($accountNumber) : Paytm
     {
-        $paytmGratificationUrl = 'https://'.config('paytm.PAYTM_GRATIFICATION_URL').'/wallet-web/salesToUserCredit';;
-        $requestData=json_encode($this->prepareData($amount));
-        $Checksumhash = (new Process)->getChecksumFromString($requestData,config('paytm.PAYTM_MERCHANT_KEY'));
-        $headerValue = array('Content-Type:application/json','mid:'.config('paytm.PAYTM_MERCHANT_GUID'),'checksumhash:'.$Checksumhash);
-        $ch = curl_init($paytmGratificationUrl);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $requestData);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // return the output in string format
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headerValue);
-        $info = curl_getinfo($ch);
+        $this->account = $accountNumber;
+        return $this;
+    }
+
+    /**
+     * @param $ifscCode
+     * @return $this
+     */
+    public function ifsc($ifscCode) : Paytm
+    {
+        $this->ifscCode = $ifscCode;
+        return $this;
+    }
+
+    public function withReferenceId($refId): Paytm
+    {
+        $this->referenceId = $refId;
+        return $this;
+    }
+
+    /**
+     * @return \Exception|Paytm
+     */
+    public function pay()
+    {
+        try {
+            if ($this->dataIsValid()) {
+                 $this->response =  $this->makePayment();
+            }
+        } catch (\Exception $e) {
+            return $e;
+        }
+        return $this;
+    }
+
+    /**
+     * @param $orderId
+     * @return bool|string
+     */
+    public function checkPaymentStatus($orderId)
+    {
+        /* initialize an array */
+        $paytmParams = array();
+
+        /* Find your MID in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys */
+        $paytmParams["MID"] = config('paytm.PAYTM_MERCHANT_MID');
+
+        /* Enter your order id which needs to be check status for */
+        $paytmParams["ORDERID"] = $orderId;
+        /**
+         * Generate checksum by parameters we have
+         * Find your Merchant Key in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys
+         */
+        $checksum = Process::getChecksumFromArray($paytmParams, config('paytm.PAYTM_MERCHANT_KEY'));
+
+        /* put generated checksum value here */
+        $paytmParams["CHECKSUMHASH"] = $checksum;
+
+        /* prepare JSON string for request */
+        $post_data = json_encode($paytmParams, JSON_UNESCAPED_SLASHES);
+
+        $ch = curl_init(config('paytm.PAYTM_STATUS_QUERY_URL'));
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
         return curl_exec($ch);
     }
 
-    protected function prepareData($amount) :array
+    /**
+     * @inheritDoc
+     * @throws \Exception
+     */
+    public function dataIsValid(): bool
     {
-        return ["request" => $this->prepareRequest($amount),
-                    $this->withMetaData()
-                ];
+        if(!$this->account)
+        {
+          return throw new \Exception('Account Number Is Required', 422);
+        }
+        if(!$this->referenceId)
+        {
+            return throw new \Exception('Reference ID Is Required', 422);
+        }
+        if (!$this->ifscCode)
+        {
+            return throw new \Exception('IFSC Code Is Required', 422);
+        }
+        return true;
     }
 
-    public function withMetaData() :array
+    /**
+     * @return $this|mixed
+     */
+    public function makePayment()
     {
-        return [
-            "metadata"=>$this->metaData,
-            "ipAddress"=>"127.0.0.1",
-            "platformName"=>"PayTM",
-            "operationType"=>"SALES_TO_USER_CREDIT"
-        ];
+        /* prepare JSON string for request body */
+        $post_data = json_encode($this->buildParams(), JSON_UNESCAPED_SLASHES);
+        /**
+         * Generate checksum by parameters we have in body
+         */
+        $checksum = Process::getChecksumFromString($post_data, "GKpp@p_b!l%MG#cC");
+
+        /* Find your MID in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys */
+        $x_mid = config('paytm.PAYTM_MERCHANT_MID');
+
+        /* put generated checksum value here */
+        $x_checksum = $checksum;
+
+        $ch = curl_init(config('paytm.PAYTM_TXN_URL'));
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: application/json", "x-mid: " . $x_mid, "x-checksum: " . $x_checksum));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        $this->response =  json_decode($response);
+        return $this;
     }
 
-    protected function prepareRequest($amount)
+    /**
+     * @return array
+     */
+    public function buildParams(): array
     {
-       return [
-            "requestType" => null,
-            "merchantGuid" => config('paytm.PAYTM_MERCHANT_GUID'),
-            "merchantOrderId" => $this->orderId,
-            "salesWalletName"=> null,
-            "salesWalletGuid"=>config('paytm.PAYTM_SALES_WALLET_GUID'),
-            "payeeEmailId"=>null,
-            "payeePhoneNumber"=>$this->mobileNumber,
-            "payeeSsoId"=>"",
-            "appliedToNewUsers"=>"Y",
-            "amount"=>$amount,
-            "currencyCode"=>"INR"
-       ];
+        /* initialize an array */
+        $paytmParams = array();
+
+        /* Find Sub Wallet GUID in your Paytm Dashboard at https://dashboard.paytm.com */
+        $paytmParams["subwalletGuid"] = config('paytm.SUB_WALLET_GUID');
+
+        /* Enter your order id which needs to be check disbursal status for */
+        $paytmParams["orderId"] = $this->referenceId;
+
+        /* Enter Beneficiary Account Number in which the disbursal needs to be made */
+        $paytmParams["beneficiaryAccount"] = $this->account;
+
+        /* Enter Beneficiary's Bank IFSC Code */
+        $paytmParams["beneficiaryIFSC"] = $this->ifscCode;
+
+        /* Amount in INR to transfer */
+        $paytmParams["amount"] = $this->amount;
+
+        /* Enter Purpose of transfer, possible values are: SALARY_DISBURSEMENT, REIMBURSEMENT, BONUS, INCENTIVE, OTHER */
+        $paytmParams["purpose"] = "INCENTIVE";
+
+        /* Enter the date for which you wants to disburse the amount. Required if purpose is SALARY_DISBURSEMENT or REIMBURSEMENT */
+        if ($this->later)
+        {
+             $paytmParams["date"] = "YYYY-MM-DD";
+        }
+        return $paytmParams;
     }
 }
-
-
- public function getStatus($orderId)
-    {
-            /* initialize an array */
-            $paytmParams = array();
-
-            /* Find your MID in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys */
-            $paytmParams["MID"] = config('paytm.PAYTM_MERCHANT_MID');
-
-            /* Enter your order id which needs to be check status for */
-            $paytmParams["ORDERID"] = $orderId;
-
-            /**
-            * Generate checksum by parameters we have
-            * Find your Merchant Key in your Paytm Dashboard at https://dashboard.paytm.com/next/apikeys 
-            */
-            $checksum = (new Process)->getChecksumFromArray($paytmParams, config('paytm.PAYTM_MERCHANT_KEY'));
-
-            /* put generated checksum value here */
-            $paytmParams["CHECKSUMHASH"] = $checksum;
-
-            /* prepare JSON string for request */
-            $post_data = json_encode($paytmParams, JSON_UNESCAPED_SLASHES);
-
-            /* for Staging */
-            $url = "https://securegw-stage.paytm.in/order/status";
-
-            /* for Production */
-            // $url = "https://securegw.paytm.in/order/status";
-
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); 
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));  
-            return curl_exec($ch);
-    }

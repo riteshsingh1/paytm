@@ -2,18 +2,23 @@
 
 [![Total Downloads][ico-downloads]][link-downloads]
 
-Paytm Payment Gateway For Gratification 
+Paytm Payment Gateway For Gratification
 
+NOTE: This is not normal Paytm Payment Gateway. This is for transferring Payment to  Users Bank Account, From Paytm Payments Bank.
+Paytm Business Account is needed.
 
 ## Installation
 
 Via Composer
 
 ``` bash
-$ composer require imritesh/paytm
+composer require imritesh/paytm
 ```
 
 ## Usage
+```php
+(new Imritesh/Paytm())->purpose('INCENTIVE')->accountNumber()->ifsc()->withReferenceId()->paymentAmount(100)->later()->pay();
+```
 
 ## Change log
 
